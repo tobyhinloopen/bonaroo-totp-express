@@ -4,14 +4,21 @@
   "description": "",
   "main": "dist/index.js",
   "dependencies": {
-    "express": "^4.17.1",
+    "express": "^4.17.1"
+  },
+  "devDependencies": {
+    "@types/jest": "^24.0.23",
     "jest": "^24.9.0",
+    "pre-commit": "^1.2.2",
     "ts-jest": "^24.2.0",
+    "tslint": "^5.20.1",
     "typescript": "^3.7.2"
   },
-  "devDependencies": {},
   "scripts": {
     "build": "tsc",
+    "ci": "npm run lint & npm run build & npm t & wait",
+    "fix": "npm run lint -- --fix",
+    "lint": "tslint -c tslint.json -p tsconfig.json",
     "test": "jest"
   },
   "repository": {
@@ -24,5 +31,6 @@
   "bugs": {
     "url": "https://github.com/tobyhinloopen/bonaroo-totp-express/issues"
   },
-  "homepage": "https://github.com/tobyhinloopen/bonaroo-totp-express#readme"
+  "homepage": "https://github.com/tobyhinloopen/bonaroo-totp-express#readme",
+  "precommit": ["fix", "ci"]
 }
