@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import { toDataURL } from "qrcode";
 import { generateSecret } from "speakeasy";
 
-export function totpSetup() {
+export function totpSetupForm() {
   return (req: Request, res: Response, next: NextFunction) => {
     const secret = generateSecret();
     res.locals.totpSecret = secret.base32;
