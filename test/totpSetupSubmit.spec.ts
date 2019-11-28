@@ -2,6 +2,7 @@ import { totpInit } from "../src/totpInit";
 import { totpSetupSubmit } from "../src/totpSetupSubmit";
 import { testMiddleware } from "./support/testMiddleware";
 import * as speakeasy from "speakeasy";
+import { Request } from "express";
 
 const SECRET = speakeasy.generateSecret().base32;
 const TOKEN = speakeasy.totp({ encoding: "base32", secret: SECRET });
@@ -38,6 +39,60 @@ test("totpSetupSubmit() with secret and valid token, no error is assigned", asyn
   }, { method: "post", data: { token: TOKEN, secret: SECRET } });
 });
 
-// test("totpSetupSubmit() with secret and valid token, store the secret using totpInit's setUserTotpSecret", async () => {
+test("totpSetupSubmit() invokes setUserTotpSecret on success", async () => {
+  const setUserTotpSecret = jest.fn();
+  let request: Request;
+  await testMiddleware(
+    [
+      totpInit({}),
+      totpSetupSubmit({ setUserTotpSecret }),
+    ],
+    async (req, res) => { request = req; },
+    { method: "post", data: { token: TOKEN, secret: SECRET } },
+  );
+  expect(setUserTotpSecret).toHaveBeenCalledWith(request, SECRET);
+});
 
-// });
+test("totpSetupSubmit() does not invoke setUserTotpSecret on failure", async () => {
+  const setUserTotpSecret = jest.fn();
+  await testMiddleware(
+    [
+      totpInit({}),
+      totpSetupSubmit({ setUserTotpSecret }),
+    ],
+    async (req, res) => {},
+    { method: "post", data: { token: INVALID_TOKEN, secret: SECRET } },
+  );
+  expect(setUserTotpSecret).not.toHaveBeenCalled();
+});
+
+test("totpSetupSubmit() on success assigns res.locals. & req. totpVerified & totpSetupSuccess=true", () => testMiddleware(
+  totpSetupSubmit({}),
+  async (req, res) => {
+    expect(res.locals.totpSetupSuccess).toEqual(true);
+    expect(req.totpSetupSuccess).toEqual(true);
+    expect(res.locals.totpVerified).toEqual(true);
+    expect(req.totpVerified).toEqual(true);
+  },
+  { method: "post", data: { token: TOKEN, secret: SECRET } },
+));
+
+test("totpSetupSubmit() assigns res.locals. & req. totpVerified & totpSetupSuccess=false", () => testMiddleware(
+  totpSetupSubmit({}),
+  async (req, res) => {
+    expect(res.locals.totpSetupSuccess).toEqual(false);
+    expect(req.totpSetupSuccess).toEqual(false);
+    expect(res.locals.totpVerified).toEqual(false);
+    expect(req.totpVerified).toEqual(false);
+  },
+  { method: "post", data: { token: INVALID_TOKEN, secret: SECRET } },
+));
+
+test("totpSetupSubmit() assigns res.locals. & req.totpSecret", () => testMiddleware(
+  totpSetupSubmit({}),
+  async (req, res) => {
+    expect(res.locals.totpSecret).toEqual(SECRET);
+    expect(req.totpSecret).toEqual(SECRET);
+  },
+  { method: "post", data: { token: TOKEN, secret: SECRET } },
+));
