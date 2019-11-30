@@ -1,63 +1,46 @@
+import * as express from "express";
 import { NextFunction, Request, Response } from "express";
-import * as speakeasy from "speakeasy";
+import { totpVerify } from "./totpVerify";
+import "./types";
 
-export function totpSetupSubmit(options: Partial<totpSetupSubmit.Options> = {}) {
-  return async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { setUserTotpSecret } = { ...totpSetupSubmit.DEFAULT_OPTIONS, ...options };
+export function totpSetupSubmit(options: Partial<totpSetupSubmit.IOptions> = {}) {
+  const app = express();
 
-      const totpErrorCodes: string[] = [];
-      res.locals.totpErrorCodes = totpErrorCodes;
-      res.locals.totpVerified = req.totpVerified = false;
-      res.locals.totpSetupSuccess = req.totpSetupSuccess = false;
+  app.use(totpSetupSubmit.extractTokenAndSecretForSubmission);
+  app.use(totpVerify);
+  app.use(totpSetupSubmit.completeSubmitAfterVerification(options));
 
-      const { token, secret } = req.body;
-
-      res.locals.totpSecret = req.totpSecret = secret;
-
-      if (!token) {
-        totpErrorCodes.push("TOKEN_REQUIRED");
-      }
-      if (!secret) {
-        totpErrorCodes.push("SECRET_REQUIRED");
-      }
-
-      if (totpErrorCodes.length > 0) {
-        next();
-        return;
-      }
-
-      const isVerifiedToken = speakeasy.totp.verify({
-        secret: secret,
-        encoding: "base32",
-        token,
-        window: 2
-      });
-
-      if (!isVerifiedToken) {
-        totpErrorCodes.push("TOKEN_VERIFY_FAILURE");
-        next();
-        return;
-      }
-
-      await setUserTotpSecret(req, secret);
-
-      res.locals.totpVerified = req.totpVerified = true;
-      res.locals.totpSetupSuccess = req.totpSetupSuccess = true;
-
-      next();
-    } catch (error) {
-      next(error);
-    }
-  };
+  return app;
 }
 
 export namespace totpSetupSubmit {
-  export interface Options {
+  export function extractTokenAndSecretForSubmission(req: Request, res: Response, next: NextFunction) {
+    const { token, secret } = req.body;
+    req.totp.secret = secret;
+    req.totp.token = token;
+    next();
+  }
+
+  export function completeSubmitAfterVerification(options: Partial<IOptions> = {}) {
+    const { setUserTotpSecret } = { ...DEFAULT_OPTIONS, ...options };
+    return async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        req.totp.setupSuccess = req.totp.verified;
+        if (req.totp.setupSuccess) {
+          await setUserTotpSecret(req, req.totp.secret!);
+        }
+        next();
+      } catch (error) {
+        next(error);
+      }
+    };
+  }
+
+  export interface IOptions {
     setUserTotpSecret(req: Request, secret: string): Promise<void>|void;
   }
 
-  export const DEFAULT_OPTIONS: Options = {
-    setUserTotpSecret: () => {},
+  export const DEFAULT_OPTIONS: IOptions = {
+    setUserTotpSecret: () => { /* NOOP */ },
   };
 }

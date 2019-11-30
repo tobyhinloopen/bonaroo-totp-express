@@ -1,7 +1,13 @@
+import { ITotpState } from "./ITotpState";
+
 declare namespace Express {
   export interface Request {
-    totpVerified?: boolean;
-    totpSecret?: string;
-    totpSetupSuccess?: boolean;
+    totp?: ITotpState;
+  }
+}
+
+declare module "express" {
+  export interface Request {
+    totp?: ITotpState;
   }
 }
