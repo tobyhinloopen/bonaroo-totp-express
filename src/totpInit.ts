@@ -1,7 +1,10 @@
-import { NextFunction, Request, Response } from "express";
+import { Handler, Request } from "express";
 
-export function totpInit(options: any) {
-  return (req: Request, res: Response, next: NextFunction) => {
+/**
+ * Assign a blank ITotpState on `req.totp` and `res.locals.totp`.
+ */
+export function totpInit(): Handler {
+  return (req: Request, res, next) => {
     if (!req.totp) {
       res.locals.totp = req.totp = {};
     }

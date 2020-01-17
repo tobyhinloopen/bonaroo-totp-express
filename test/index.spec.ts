@@ -1,18 +1,8 @@
-import { hello } from "../src";
-import * as express from "express";
-import supertest = require("supertest");
+import * as src from "../src";
 
-test("hello", () => {
-  expect(hello("foo")).toEqual("Hello foo");
-});
-
-test("supertest", () => {
-  const app = express();
-
-  app.get("/", (req, res) => res.type("txt").send("Hi"));
-
-  return supertest(app)
-    .get("/")
-    .expect(200, "Hi")
-    .expect("Content-Type", /text/);
-});
+for (const name of ["totpInit", "totpSetupForm", "totpSetupSubmit", "totpVerify", "totpVerifySubmit"]) {
+  test(`middleware ${name}() is exported and a function`, () => {
+    expect(src).toHaveProperty(name);
+    expect(typeof src[name]).toEqual("function");
+  });
+}

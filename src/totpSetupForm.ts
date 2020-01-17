@@ -1,9 +1,13 @@
-import { NextFunction, Request, Response } from "express";
+import { Handler, Request } from "express";
 import { toDataURL } from "qrcode";
 import { generateSecret } from "speakeasy";
 
-export function totpSetupForm() {
-  return (req: Request, res: Response, next: NextFunction) => {
+/**
+ * Generate a new secret and QR code and assign them to `totp.secret` and
+ * `totp.qrCodeUrl`.
+ */
+export function totpSetupForm(): Handler {
+  return (req: Request, res, next) => {
     const secret = generateSecret();
     req.totp.secret = secret.base32;
     toDataURL(secret.otpauth_url, (err, url) => {

@@ -1,13 +1,18 @@
 import * as express from "express";
-import { NextFunction, Request, Response } from "express";
+import { Handler, NextFunction, Request, Response } from "express";
 import { totpVerify } from "./totpVerify";
 import "./types";
 
-export function totpSetupSubmit(options: Partial<totpSetupSubmit.IOptions> = {}) {
+/**
+ * Extract the secret and token from the request body, verify the token against
+ * the secret, and store the secret when verification was successful using
+ * `setUserTotpSecret` in `options`.
+ */
+export function totpSetupSubmit(options: Partial<totpSetupSubmit.IOptions> = {}): Handler {
   const app = express();
 
   app.use(totpSetupSubmit.extractTokenAndSecretForSubmission);
-  app.use(totpVerify);
+  app.use(totpVerify());
   app.use(totpSetupSubmit.completeSubmitAfterVerification(options));
 
   return app;
@@ -21,9 +26,9 @@ export namespace totpSetupSubmit {
     next();
   }
 
-  export function completeSubmitAfterVerification(options: Partial<IOptions> = {}) {
+  export function completeSubmitAfterVerification(options: Partial<IOptions> = {}): Handler {
     const { setUserTotpSecret } = { ...DEFAULT_OPTIONS, ...options };
-    return async (req: Request, res: Response, next: NextFunction) => {
+    return async (req: Request, res, next) => {
       try {
         req.totp.setupSuccess = req.totp.verified;
         if (req.totp.setupSuccess) {
