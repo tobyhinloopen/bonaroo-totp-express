@@ -1,7 +1,6 @@
 import * as express from "express";
 import { Handler, Request } from "express";
 import { totpVerify } from "./totpVerify";
-import "./types";
 
 /**
  * Extract totp token from request body and verify it against a secret fetched
