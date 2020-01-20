@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "main": "dist/index.js",
+  "files": ["dist"],
   "dependencies": {
     "express": "^4.17.1",
     "qrcode": "^1.4.4",
@@ -28,6 +29,7 @@
   "scripts": {
     "build": "tsc",
     "ci": "npm run lint & npm run build & npm t & wait",
+    "prepublishOnly": "npm run ci",
     "fix": "npm run lint -- --fix",
     "lint": "tslint -c tslint.json -p tsconfig.json",
     "test": "jest"

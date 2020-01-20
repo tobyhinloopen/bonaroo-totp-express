@@ -1,6 +1,5 @@
 import { Handler, Request } from "express";
 import * as speakeasy from "speakeasy";
-import "./types";
 
 /**
  * Verify `totp.token` against `totp.secret` and assign `totp.verified` with
