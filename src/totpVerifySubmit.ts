@@ -1,4 +1,3 @@
-import * as express from "express";
 import { Handler, Request } from "express";
 import { totpVerify } from "./totpVerify";
 
@@ -9,13 +8,11 @@ import { totpVerify } from "./totpVerify";
  * Assign `totp.verified` with `true` on success, or `totp.errorCodes` with
  * error codes on failure.
  */
-export function totpVerifySubmit(options: Partial<totpVerifySubmit.IOptions> = {}): Handler {
-  const app = express();
-
-  app.use(totpVerifySubmit.assignSecretAndTokenForVerification(options));
-  app.use(totpVerify());
-
-  return app;
+export function totpVerifySubmit(options: Partial<totpVerifySubmit.IOptions> = {}): Handler[] {
+  return [
+    totpVerifySubmit.assignSecretAndTokenForVerification(options),
+    totpVerify(),
+  ];
 }
 
 export namespace totpVerifySubmit {

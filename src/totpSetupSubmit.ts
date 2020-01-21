@@ -1,4 +1,3 @@
-import * as express from "express";
 import { Handler, NextFunction, Request, Response } from "express";
 import { totpVerify } from "./totpVerify";
 
@@ -7,14 +6,12 @@ import { totpVerify } from "./totpVerify";
  * the secret, and store the secret when verification was successful using
  * `setUserTotpSecret` in `options`.
  */
-export function totpSetupSubmit(options: Partial<totpSetupSubmit.IOptions> = {}): Handler {
-  const app = express();
-
-  app.use(totpSetupSubmit.extractTokenAndSecretForSubmission);
-  app.use(totpVerify());
-  app.use(totpSetupSubmit.completeSubmitAfterVerification(options));
-
-  return app;
+export function totpSetupSubmit(options: Partial<totpSetupSubmit.IOptions> = {}): Handler[] {
+  return [
+    totpSetupSubmit.extractTokenAndSecretForSubmission,
+    totpVerify(),
+    totpSetupSubmit.completeSubmitAfterVerification(options),
+  ];
 }
 
 export namespace totpSetupSubmit {
