@@ -12,59 +12,63 @@ const TOKEN = speakeasy.totp({ encoding: "base32", secret: SECRET });
 const OLD_TOKEN = speakeasy.totp({ encoding: "base32", secret: SECRET, time: Date.parse("2000-01-01") / 1000 });
 const INVALID_TOKEN = "123456";
 
-test("totpSetupSubmit() without secret, add SECRET_REQUIRED to errorCodes", () => testMiddleware(
-  [totpInit({}), totpSetupSubmit()],
+const OPTS: totpSetupSubmit.IOptions = {
+  label: "info@example.com",
+};
+
+test("totpSetupSubmit(OPTS) without secret, add SECRET_REQUIRED to errorCodes", () => testMiddleware(
+  [totpInit({}), totpSetupSubmit(OPTS)],
   async (req, res) => expect(req.totp).toMatchObject({ errorCodes: ["SECRET_REQUIRED"] }),
   { method: "post", data: { token: TOKEN, secret: "" } })
 );
 
-test("totpSetupSubmit() without token, add TOKEN_REQUIRED to errorCodes", () => testMiddleware(
-  [totpInit({}), totpSetupSubmit()],
+test("totpSetupSubmit(OPTS) without token, add TOKEN_REQUIRED to errorCodes", () => testMiddleware(
+  [totpInit({}), totpSetupSubmit(OPTS)],
   async (req, res) => expect(req.totp).toMatchObject({ errorCodes: ["TOKEN_REQUIRED"] }),
   { method: "post", data: { token: "", secret: SECRET } })
 );
 
-test("totpSetupSubmit() with secret but random token, add TOKEN_VERIFY_FAILURE to errorCodes", () => testMiddleware(
-  [totpInit({}), totpSetupSubmit()],
+test("totpSetupSubmit(OPTS) with secret but random token, add TOKEN_VERIFY_FAILURE to errorCodes", () => testMiddleware(
+  [totpInit({}), totpSetupSubmit(OPTS)],
   async (req, res) => expect(req.totp).toMatchObject({ errorCodes: ["TOKEN_VERIFY_FAILURE"] }),
   { method: "post", data: { token: INVALID_TOKEN, secret: SECRET } })
 );
 
-test("totpSetupSubmit() with secret but old token, add TOKEN_VERIFY_FAILURE to errorCodes", () => testMiddleware(
-  [totpInit({}), totpSetupSubmit()],
+test("totpSetupSubmit(OPTS) with secret but old token, add TOKEN_VERIFY_FAILURE to errorCodes", () => testMiddleware(
+  [totpInit({}), totpSetupSubmit(OPTS)],
   async (req, res) => expect(req.totp).toMatchObject({ errorCodes: ["TOKEN_VERIFY_FAILURE"] }),
   { method: "post", data: { token: OLD_TOKEN, secret: SECRET } })
 );
 
-test("totpSetupSubmit() with secret and valid token, no error is assigned", () => testMiddleware(
-  [totpInit({}), totpSetupSubmit()],
+test("totpSetupSubmit(OPTS) with secret and valid token, no error is assigned", () => testMiddleware(
+  [totpInit({}), totpSetupSubmit(OPTS)],
   async (req, res) => expect(req.totp).toMatchObject({ errorCodes: [] }),
   { method: "post", data: { token: TOKEN, secret: SECRET } })
 );
 
-test("totpSetupSubmit() invokes setUserTotpSecret on success", async () => {
+test("totpSetupSubmit(OPTS) invokes setUserTotpSecret on success", async () => {
   const setUserTotpSecret = jest.fn();
   let request: Request;
   await testMiddleware(
-    [totpInit({}), totpSetupSubmit({ setUserTotpSecret })],
+    [totpInit({}), totpSetupSubmit({ ...OPTS, setUserTotpSecret })],
     async (req, res) => { request = req; },
     { method: "post", data: { token: TOKEN, secret: SECRET } },
   );
   expect(setUserTotpSecret).toHaveBeenCalledWith(request, SECRET);
 });
 
-test("totpSetupSubmit() does not invoke setUserTotpSecret on failure", async () => {
+test("totpSetupSubmit(OPTS) does not invoke setUserTotpSecret on failure", async () => {
   const setUserTotpSecret = jest.fn();
   await testMiddleware(
-    [totpInit({}), totpSetupSubmit({ setUserTotpSecret })],
+    [totpInit({}), totpSetupSubmit({ ...OPTS, setUserTotpSecret })],
     async (req, res) => {},
     { method: "post", data: { token: INVALID_TOKEN, secret: SECRET } },
   );
   expect(setUserTotpSecret).not.toHaveBeenCalled();
 });
 
-test("totpSetupSubmit() on success assigns verified & setupSuccess=true", () => testMiddleware(
-  [totpInit({}), totpSetupSubmit({})],
+test("totpSetupSubmit(OPTS) on success assigns verified & setupSuccess=true", () => testMiddleware(
+  [totpInit({}), totpSetupSubmit(OPTS)],
   async (req, res) => {
     expect(req.totp.setupSuccess).toEqual(true);
     expect(req.totp.verified).toEqual(true);
@@ -72,8 +76,8 @@ test("totpSetupSubmit() on success assigns verified & setupSuccess=true", () => 
   { method: "post", data: { token: TOKEN, secret: SECRET } },
 ));
 
-test("totpSetupSubmit() assigns verified & setupSuccess=false", () => testMiddleware(
-  [totpInit({}), totpSetupSubmit({})],
+test("totpSetupSubmit(OPTS) assigns verified & setupSuccess=false", () => testMiddleware(
+  [totpInit({}), totpSetupSubmit(OPTS)],
   async (req, res) => {
     expect(req.totp.setupSuccess).toEqual(false);
     expect(req.totp.verified).toEqual(false);
@@ -81,33 +85,39 @@ test("totpSetupSubmit() assigns verified & setupSuccess=false", () => testMiddle
   { method: "post", data: { token: INVALID_TOKEN, secret: SECRET } },
 ));
 
-test("totpSetupSubmit() assigns secret", () => testMiddleware(
-  [totpInit({}), totpSetupSubmit({})],
+test("totpSetupSubmit(OPTS) assigns secret", () => testMiddleware(
+  [totpInit({}), totpSetupSubmit(OPTS)],
   async (req, res) => expect(req.totp.secret).toEqual(SECRET),
   { method: "post", data: { token: TOKEN, secret: SECRET } },
 ));
 
-test("totpSetupSubmit() doesn't destroy app settings", () => testMiddleware(
+test("totpSetupSubmit(OPTS) assigns qr code on failure", () => testMiddleware(
+  [totpInit({}), totpSetupSubmit(OPTS)],
+  async (req, res) => expect(req.totp.qrCodeUrl).toBeTruthy(),
+  { method: "post", data: { token: OLD_TOKEN, secret: SECRET } },
+));
+
+test("totpSetupSubmit(OPTS) doesn't destroy app settings", () => testMiddleware(
   [
     (req, res, next) => {
       req.app.set("view engine", "ejs");
       next();
     },
     totpInit({}),
-    totpSetupSubmit({}),
+    totpSetupSubmit(OPTS),
   ],
   async (req, res) => expect(req.app.get("view engine")).toEqual("ejs"),
   { method: "post", data: { token: TOKEN, secret: SECRET } },
 ));
 
-test("totpSetupSubmit() as handler doesn't destroy app settings", () => {
+test("totpSetupSubmit(OPTS) as handler doesn't destroy app settings", () => {
   const app = express();
 
   app.use(bodyParser.urlencoded({ extended: true }));
   app.set("view engine", "ejs");
   app.use(totpInit({}));
 
-  app.post("/", totpSetupSubmit({}), (req, res, next) => {
+  app.post("/", totpSetupSubmit(OPTS), (req, res, next) => {
     try {
       expect(req.app.get("view engine")).toEqual("ejs");
       res.send("ok");
@@ -124,14 +134,14 @@ test("totpSetupSubmit() as handler doesn't destroy app settings", () => {
   });
 });
 
-test("totpSetupSubmit() as middleware doesn't destroy app settings", () => {
+test("totpSetupSubmit(OPTS) as middleware doesn't destroy app settings", () => {
   const app = express();
 
   app.use(bodyParser.urlencoded({ extended: true }));
   app.set("view engine", "ejs");
   app.use(totpInit({}));
 
-  app.use(totpSetupSubmit({}));
+  app.use(totpSetupSubmit(OPTS));
   app.post("/", (req, res, next) => {
     try {
       expect(req.app.get("view engine")).toEqual("ejs");

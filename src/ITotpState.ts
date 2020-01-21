@@ -19,6 +19,12 @@ export interface ITotpState {
   setupSuccess?: boolean;
 
   /**
+   * Current secret key encoded as an URL.
+   * @see https://github.com/google/google-authenticator/wiki/Key-Uri-Format
+   */
+  authUrl?: string;
+
+  /**
    * The current user-provided 6-digit token or password. Only set for setup and
    * verify.
    */
