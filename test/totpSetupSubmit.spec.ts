@@ -3,6 +3,9 @@ import { totpSetupSubmit } from "../src/totpSetupSubmit";
 import { testMiddleware } from "./support/testMiddleware";
 import * as speakeasy from "speakeasy";
 import { Request } from "express";
+import * as express from "express";
+import bodyParser = require("body-parser");
+import supertest = require("supertest");
 
 const SECRET = speakeasy.generateSecret().base32;
 const TOKEN = speakeasy.totp({ encoding: "base32", secret: SECRET });
@@ -83,3 +86,65 @@ test("totpSetupSubmit() assigns secret", () => testMiddleware(
   async (req, res) => expect(req.totp.secret).toEqual(SECRET),
   { method: "post", data: { token: TOKEN, secret: SECRET } },
 ));
+
+test("totpSetupSubmit() doesn't destroy app settings", () => testMiddleware(
+  [
+    (req, res, next) => {
+      req.app.set("view engine", "ejs");
+      next();
+    },
+    totpInit({}),
+    totpSetupSubmit({}),
+  ],
+  async (req, res) => expect(req.app.get("view engine")).toEqual("ejs"),
+  { method: "post", data: { token: TOKEN, secret: SECRET } },
+));
+
+test("totpSetupSubmit() as handler doesn't destroy app settings", () => {
+  const app = express();
+
+  app.use(bodyParser.urlencoded({ extended: true }));
+  app.set("view engine", "ejs");
+  app.use(totpInit({}));
+
+  app.post("/", totpSetupSubmit({}), (req, res, next) => {
+    try {
+      expect(req.app.get("view engine")).toEqual("ejs");
+      res.send("ok");
+      next();
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  return new Promise((resolve, reject) => {
+    app.use((error, req, res, next) => { reject(error); next(error); });
+    supertest(app).post("/").send({ token: TOKEN, secret: SECRET })
+      .expect(200).then(resolve, reject);
+  });
+});
+
+test("totpSetupSubmit() as middleware doesn't destroy app settings", () => {
+  const app = express();
+
+  app.use(bodyParser.urlencoded({ extended: true }));
+  app.set("view engine", "ejs");
+  app.use(totpInit({}));
+
+  app.use(totpSetupSubmit({}));
+  app.post("/", (req, res, next) => {
+    try {
+      expect(req.app.get("view engine")).toEqual("ejs");
+      res.send("ok");
+      next();
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  return new Promise((resolve, reject) => {
+    app.use((error, req, res, next) => { reject(error); next(error); });
+    supertest(app).post("/").send({ token: TOKEN, secret: SECRET })
+      .expect(200).then(resolve, reject);
+  });
+});

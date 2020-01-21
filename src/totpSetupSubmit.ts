@@ -1,4 +1,4 @@
-import { Handler, NextFunction, Request, Response } from "express";
+import { Handler, NextFunction, Request, Response, Router } from "express";
 import { totpVerify } from "./totpVerify";
 
 /**
@@ -6,12 +6,12 @@ import { totpVerify } from "./totpVerify";
  * the secret, and store the secret when verification was successful using
  * `setUserTotpSecret` in `options`.
  */
-export function totpSetupSubmit(options: Partial<totpSetupSubmit.IOptions> = {}): Handler[] {
-  return [
+export function totpSetupSubmit(options: Partial<totpSetupSubmit.IOptions> = {}): Handler {
+  return Router().use(
     totpSetupSubmit.extractTokenAndSecretForSubmission,
     totpVerify(),
     totpSetupSubmit.completeSubmitAfterVerification(options),
-  ];
+  );
 }
 
 export namespace totpSetupSubmit {

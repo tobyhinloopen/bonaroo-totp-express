@@ -1,4 +1,4 @@
-import { Handler, Request } from "express";
+import { Handler, Request, Router } from "express";
 import { totpVerify } from "./totpVerify";
 
 /**
@@ -8,11 +8,11 @@ import { totpVerify } from "./totpVerify";
  * Assign `totp.verified` with `true` on success, or `totp.errorCodes` with
  * error codes on failure.
  */
-export function totpVerifySubmit(options: Partial<totpVerifySubmit.IOptions> = {}): Handler[] {
-  return [
+export function totpVerifySubmit(options: Partial<totpVerifySubmit.IOptions> = {}): Handler {
+  return Router().use(
     totpVerifySubmit.assignSecretAndTokenForVerification(options),
     totpVerify(),
-  ];
+  );
 }
 
 export namespace totpVerifySubmit {
